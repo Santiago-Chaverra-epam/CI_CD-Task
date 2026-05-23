@@ -6,7 +6,7 @@ on:
 
   # Trigger 2: scheduled — Mon–Fri at 06:00 UTC (adjust cron as needed)
   schedule:
-    - cron: '0 6 * * 1-5'
+    - cron: '0 23 * * *'
 
   # Trigger 3: manual run with browser selection
   workflow_dispatch:
