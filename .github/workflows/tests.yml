@@ -1,0 +1,168 @@
+name: Selenium WebDriver Tests
+
+on:
+  # Trigger 1: any pull request to any branch
+  pull_request:
+
+  # Trigger 2: scheduled — Mon–Fri at 06:00 UTC (adjust cron as needed)
+  schedule:
+    - cron: '0 6 * * 1-5'
+
+  # Trigger 3: manual run with browser selection
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser for UI tests'
+        required: true
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+# ─────────────────────────────────────────────────────────────
+# JOB 1 — API Tests
+# ─────────────────────────────────────────────────────────────
+jobs:
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run API tests
+        run: |
+          dotnet test SeleniumFramework.Tests/SeleniumFramework.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category=API" \
+            --logger "trx;LogFileName=api-results.trx" \
+            --results-directory ./TestResults/api
+
+      - name: Upload API results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: |
+            ./TestResults/api/
+            SeleniumFramework.Tests/bin/Release/net8.0/logs/
+
+# ─────────────────────────────────────────────────────────────
+# JOB 2 — UI Tests (always runs, even if api-tests fails)
+# ─────────────────────────────────────────────────────────────
+  ui-tests:
+    name: UI Tests (${{ inputs.browser || 'chrome' }})
+    runs-on: ubuntu-latest
+    needs: api-tests
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Resolve browser
+        run: echo "BROWSER=${{ inputs.browser || 'chrome' }}" >> $GITHUB_ENV
+
+      # Patch appsettings BEFORE build so the value is baked into the output
+      - name: Set browser in appsettings
+        run: |
+          jq --arg b "$BROWSER" '.Browser = $b' \
+            SeleniumFramework.Tests/appsettings.json > tmp.json \
+            && mv tmp.json SeleniumFramework.Tests/appsettings.json
+          jq --arg b "$BROWSER" '.Browser = $b' \
+            SeleniumFramework.Specs/appsettings.json > tmp.json \
+            && mv tmp.json SeleniumFramework.Specs/appsettings.json
+
+      - name: Set up Chrome
+        if: env.BROWSER == 'chrome'
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Set up Firefox
+        if: env.BROWSER == 'firefox'
+        uses: browser-actions/setup-firefox@v1
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Start virtual display (Xvfb)
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      # continue-on-error: true ensures SpecFlow still runs if NUnit UI tests fail
+      - name: Run NUnit UI tests
+        run: |
+          dotnet test SeleniumFramework.Tests/SeleniumFramework.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category!=API" \
+            --logger "trx;LogFileName=ui-nunit-results.trx" \
+            --results-directory ./TestResults/ui-nunit
+        continue-on-error: true
+
+      - name: Run SpecFlow UI tests
+        run: |
+          dotnet test SeleniumFramework.Specs/SeleniumFramework.Specs.csproj \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=ui-specflow-results.trx" \
+            --results-directory ./TestResults/ui-specflow
+
+      - name: Upload UI test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: |
+            ./TestResults/ui-nunit/
+            ./TestResults/ui-specflow/
+            SeleniumFramework.Tests/bin/Release/net8.0/logs/
+            SeleniumFramework.Specs/bin/Release/net8.0/logs/
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: "**/screenshots/*.png"
+          if-no-files-found: ignore
