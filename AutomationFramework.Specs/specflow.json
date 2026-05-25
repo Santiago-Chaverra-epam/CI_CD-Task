@@ -1,5 +1,5 @@
 {
-  "$schema": "https://specflow.org/specflow-default.json",
+  "$schema": "https://reqnroll.net/reqnroll-default.json",
   "bindingCulture": {
     "name": "en-US"
   }

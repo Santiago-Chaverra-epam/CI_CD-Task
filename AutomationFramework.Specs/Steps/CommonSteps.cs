@@ -1,7 +1,7 @@
 using OpenQA.Selenium;
 using AutomationFramework.Pages;
 using AutomationFramework.Specs.Shared;
-using TechTalk.SpecFlow;
+using Reqnroll;
 
 namespace AutomationFramework.Specs.Steps;
 

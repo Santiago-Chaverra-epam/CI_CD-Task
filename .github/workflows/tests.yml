@@ -24,7 +24,7 @@ on:
           - firefox
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '10.0.x'
 
 # ─────────────────────────────────────────────────────────────
 # JOB 1 — API Tests
@@ -71,7 +71,7 @@ jobs:
           name: api-test-results
           path: |
             ./TestResults/api/
-            AutomationFramework.ApiTests/bin/Release/net8.0/logs/
+            AutomationFramework.ApiTests/bin/Release/net10.0/logs/
 
 # ─────────────────────────────────────────────────────────────
 # JOB 2 — UI Tests (always runs, even if api-tests fails)
@@ -131,7 +131,7 @@ jobs:
           Xvfb :99 -screen 0 1920x1080x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
-      # continue-on-error: true ensures SpecFlow still runs if NUnit UI tests fail
+      # continue-on-error: true ensures Reqnroll still runs if NUnit UI tests fail
       - name: Run NUnit UI tests
         run: |
           dotnet test AutomationFramework.UITests/AutomationFramework.UITests.csproj \
@@ -141,7 +141,7 @@ jobs:
             --results-directory ./TestResults/ui-nunit
         continue-on-error: true
 
-      - name: Run SpecFlow UI tests
+      - name: Run Reqnroll UI tests
         run: |
           dotnet test AutomationFramework.Specs/AutomationFramework.Specs.csproj \
             --no-build \
@@ -157,8 +157,8 @@ jobs:
           path: |
             ./TestResults/ui-nunit/
             ./TestResults/ui-specflow/
-            AutomationFramework.UITests/bin/Release/net8.0/logs/
-            AutomationFramework.Specs/bin/Release/net8.0/logs/
+            AutomationFramework.UITests/bin/Release/net10.0/logs/
+            AutomationFramework.Specs/bin/Release/net10.0/logs/
 
       - name: Upload screenshots
         if: always()

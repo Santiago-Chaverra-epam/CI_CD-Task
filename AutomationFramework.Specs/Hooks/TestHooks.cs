@@ -1,10 +1,10 @@
-using BoDi;
+using Reqnroll.BoDi;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using Serilog;
 using AutomationFramework.Drivers;
-using TechTalk.SpecFlow;
+using Reqnroll;
 
 namespace AutomationFramework.Specs.Hooks;
 
@@ -34,7 +34,7 @@ public sealed class TestHooks
                 outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
-        Log.Information("SpecFlow test run started");
+        Log.Information("Reqnroll test run started");
     }
 
     [BeforeScenario]
@@ -90,7 +90,7 @@ public sealed class TestHooks
     [AfterTestRun]
     public static void AfterTestRun()
     {
-        Log.Information("SpecFlow test run complete");
+        Log.Information("Reqnroll test run complete");
         Log.CloseAndFlush();
     }
 }

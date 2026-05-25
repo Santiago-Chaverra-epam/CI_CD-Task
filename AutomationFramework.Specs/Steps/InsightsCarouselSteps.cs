@@ -1,6 +1,6 @@
 using NUnit.Framework;
 using AutomationFramework.Specs.Shared;
-using TechTalk.SpecFlow;
+using Reqnroll;
 
 namespace AutomationFramework.Specs.Steps;
 
