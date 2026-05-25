@@ -1,8 +1,11 @@
 name: Selenium WebDriver Tests
 
 on:
-  # Trigger 1: any pull request to any branch
+  # Trigger 1: pull requests targeting main or develop only
   pull_request:
+    branches:
+      - main
+      - develop
 
   # Trigger 2: scheduled — Mon–Fri at 06:00 UTC (adjust cron as needed)
   schedule:
@@ -55,10 +58,9 @@ jobs:
 
       - name: Run API tests
         run: |
-          dotnet test SeleniumFramework.Tests/SeleniumFramework.Tests.csproj \
+          dotnet test AutomationFramework.ApiTests/AutomationFramework.ApiTests.csproj \
             --no-build \
             --configuration Release \
-            --filter "Category=API" \
             --logger "trx;LogFileName=api-results.trx" \
             --results-directory ./TestResults/api
 
@@ -69,7 +71,7 @@ jobs:
           name: api-test-results
           path: |
             ./TestResults/api/
-            SeleniumFramework.Tests/bin/Release/net8.0/logs/
+            AutomationFramework.ApiTests/bin/Release/net8.0/logs/
 
 # ─────────────────────────────────────────────────────────────
 # JOB 2 — UI Tests (always runs, even if api-tests fails)
@@ -103,11 +105,11 @@ jobs:
       - name: Set browser in appsettings
         run: |
           jq --arg b "$BROWSER" '.Browser = $b' \
-            SeleniumFramework.Tests/appsettings.json > tmp.json \
-            && mv tmp.json SeleniumFramework.Tests/appsettings.json
+            AutomationFramework.UITests/appsettings.json > tmp.json \
+            && mv tmp.json AutomationFramework.UITests/appsettings.json
           jq --arg b "$BROWSER" '.Browser = $b' \
-            SeleniumFramework.Specs/appsettings.json > tmp.json \
-            && mv tmp.json SeleniumFramework.Specs/appsettings.json
+            AutomationFramework.Specs/appsettings.json > tmp.json \
+            && mv tmp.json AutomationFramework.Specs/appsettings.json
 
       - name: Set up Chrome
         if: env.BROWSER == 'chrome'
@@ -132,17 +134,16 @@ jobs:
       # continue-on-error: true ensures SpecFlow still runs if NUnit UI tests fail
       - name: Run NUnit UI tests
         run: |
-          dotnet test SeleniumFramework.Tests/SeleniumFramework.Tests.csproj \
+          dotnet test AutomationFramework.UITests/AutomationFramework.UITests.csproj \
             --no-build \
             --configuration Release \
-            --filter "Category!=API" \
             --logger "trx;LogFileName=ui-nunit-results.trx" \
             --results-directory ./TestResults/ui-nunit
         continue-on-error: true
 
       - name: Run SpecFlow UI tests
         run: |
-          dotnet test SeleniumFramework.Specs/SeleniumFramework.Specs.csproj \
+          dotnet test AutomationFramework.Specs/AutomationFramework.Specs.csproj \
             --no-build \
             --configuration Release \
             --logger "trx;LogFileName=ui-specflow-results.trx" \
@@ -156,8 +157,8 @@ jobs:
           path: |
             ./TestResults/ui-nunit/
             ./TestResults/ui-specflow/
-            SeleniumFramework.Tests/bin/Release/net8.0/logs/
-            SeleniumFramework.Specs/bin/Release/net8.0/logs/
+            AutomationFramework.UITests/bin/Release/net8.0/logs/
+            AutomationFramework.Specs/bin/Release/net8.0/logs/
 
       - name: Upload screenshots
         if: always()
